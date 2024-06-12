@@ -63,25 +63,27 @@ sha_mismatch_found=0
 extract_names_with_att_extension() {
   local name="$1"
   local repo_hash="$2"
+  local pattern="${3:-rhoai-2.11}"
 
   if [ -z "$repo_hash" ]; then
     echo "Error: The $name image is referenced using floating tags. Exiting..."
     exit 1
   fi
 
-  # Fetch the tag from the JSON response using skopeo
-  json_response=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[]')
+  # Fetch the tags for the image using skopeo
+  local tags
+  tags=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[]')
   
-  if [ -z "$json_response" ]; then
+  if [ -z "$tags" ]; then
     echo -e "\e[31mError: No tags found for $name in Quay repository\e[0m"
     sha_mismatch_found=1
     return
   fi
 
-  # Loop through tags to find the correct one (e.g., rhoai-2.11)
-  local quay_hash
-  for tag in $json_response; do
-    if [[ "$tag" == *"rhoai-2.11"* ]]; then
+  # Loop through tags to find the correct one based on the pattern
+  local quay_hash=""
+  for tag in $tags; do
+    if [[ "$tag" == *"$pattern"* ]]; then
       quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$tag | jq -r '.Digest')
       if [ -n "$quay_hash" ]; then
         break
@@ -90,15 +92,15 @@ extract_names_with_att_extension() {
   done
 
   if [ -z "$quay_hash" ]; then
-    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name:$tag\e[0m"
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name with pattern: $pattern\e[0m"
     sha_mismatch_found=1
     return
   fi
 
   if [ "$repo_hash" = "$quay_hash" ]; then
-    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name:$tag\e[0m"
+    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name with pattern: $pattern\e[0m"
   else
-    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $name:$tag\e[0m"
+    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $name with pattern: $pattern\e[0m"
     sha_mismatch_found=1
   fi
 }
@@ -115,7 +117,7 @@ main() {
       local hash
       name=$(echo "$line" | cut -d'=' -f1)
       hash=$(echo "$line" | awk -F 'sha256:' '{print $2}')
-      extract_names_with_att_extension "$name" "$hash"
+      extract_names_with_att_extension "$name" "$hash" "rhoai-2.11"
     done <<< "$input"
   else
     echo "File not found: $full_path"
