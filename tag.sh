@@ -69,7 +69,7 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
-  json_response=$(curl -s "https://quay.io/api/v1/repository/modh/$tag/tag/" | jq -r '.tags | .[] | select(.name | endswith(".att")) | .name')
+  json_response=$(skopeo inspect docker://quay.io/modh/$tag | jq -r '.RepoTags | map(select(endswith(".att"))) | .[]')
   quay_hash=$(echo "$json_response" | sed 's/^sha256-\(.*\)\.att$/\1/')
 
   if [ "$repo_hash" = "$quay_hash" ]; then
