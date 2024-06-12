@@ -63,13 +63,7 @@ sha_mismatch_found=0
 extract_names_with_att_extension() {
   local name="$1"
   local repo_hash="$2"
-  local pattern="${3:-rhoai-2.11}"
-
-  if [ -z "$repo_hash" ]; then
-    echo "Error: The $name image is referenced using floating tags. Exiting..."
-    exit 1
-  fi
-
+  local pattern="${3:-rhoai-2.11}"  # Default pattern is "rhoai-2.11"
 
   # Loop through tags to find the correct one based on the pattern
   local quay_hash=""
@@ -82,12 +76,14 @@ extract_names_with_att_extension() {
     fi
   done
 
+  # Check if Quay SHA was fetched
   if [ -z "$quay_hash" ]; then
     echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name with pattern: $pattern\e[0m"
     sha_mismatch_found=1
     return
   fi
 
+  # Compare repository and Quay SHAs
   if [ "$repo_hash" = "$quay_hash" ]; then
     echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name with pattern: $pattern\e[0m"
   else
