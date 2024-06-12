@@ -70,6 +70,9 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
+  # Remove sha256: prefix from the repo_hash if it exists
+  repo_hash=${repo_hash#sha256:}
+
   # Attempt to fetch Quay SHA for the specified tag pattern
   echo "Attempting to fetch Quay SHA for tag: $name with pattern: $pattern"
   quay_output=$(skopeo inspect docker://quay.io/modh/$name:$pattern 2>&1)
@@ -80,8 +83,8 @@ extract_names_with_att_extension() {
     return
   fi
 
-  # Extract the SHA hash from the Quay output
-  quay_hash=$(echo "$quay_output" | jq -r '.Digest')
+  # Extract the SHA hash from the Quay output and remove sha256: prefix
+  quay_hash=$(echo "$quay_output" | jq -r '.Digest' | sed 's/^sha256://')
   if [ -z "$quay_hash" ]; then
     echo "Error: Quay SHA could not be fetched for tag: $name with pattern: $pattern"
     sha_mismatch_found=1
