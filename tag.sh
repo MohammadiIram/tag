@@ -63,7 +63,7 @@ sha_mismatch_found=0
 extract_names_with_att_extension() {
   local name="$1"
   local repo_hash="$2"
-  local pattern="${3:-rhoai-2.11}"
+  local pattern="$3"
 
   if [ -z "$repo_hash" ]; then
     echo "Error: The $name image is referenced using floating tags. Exiting..."
@@ -109,7 +109,7 @@ main() {
     while IFS= read -r line; do
       name=$(echo "$line" | cut -d'=' -f1)
       hash=$(echo "$line" | awk -F 'sha256:' '{print $2}')
-      extract_names_with_att_extension "$name" "$hash"
+      extract_names_with_att_extension "$name" "$hash" "$branch_name"
     done <<< "$input"
   else
     echo "File not found: $full_path"
