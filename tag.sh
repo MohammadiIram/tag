@@ -71,6 +71,11 @@ extract_names_with_att_extension() {
 
   # Fetch the SHA from the tag
   quay_hash=$(skopeo inspect docker://quay.io/modh/$tag | jq -r '.Digest')
+  if [ -z "$quay_hash" ]; then
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $tag\e[0m"
+    sha_mismatch_found=1
+    return
+  fi
 
   if [ "$repo_hash" = "$quay_hash" ]; then
     echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $tag\e[0m"
