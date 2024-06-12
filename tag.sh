@@ -63,13 +63,22 @@ sha_mismatch_found=0
 extract_names_with_att_extension() {
   local name="$1"
   local repo_hash="$2"
-  local pattern="${3:-rhoai-2.11}"  # Default pattern is "rhoai-2.11"
+  local pattern="${3:-rhoai-2.11}"
+
+  if [ -z "$repo_hash" ]; then
+    echo "Error: The $name image is referenced using floating tags. Exiting..."
+    exit 1
+  fi
+
+  echo "Attempting to fetch Quay SHA for tag: $name with pattern: $pattern"
 
   # Loop through tags to find the correct one based on the pattern
   local quay_hash=""
   for tag in $tags; do
     if [[ "$tag" == *"$pattern"* ]]; then
+      echo "Attempting to fetch Quay SHA for tag: $name with pattern: $pattern and tag: $tag"
       quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$tag | jq -r '.Digest')
+      echo "Quay SHA for tag: $name with pattern: $pattern and tag: $tag is: $quay_hash"
       if [ -n "$quay_hash" ]; then
         break
       fi
@@ -91,6 +100,7 @@ extract_names_with_att_extension() {
     sha_mismatch_found=1
   fi
 }
+
 
 # Main logic for processing the file and SHAs
 main() {
