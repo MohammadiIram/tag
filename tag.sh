@@ -70,24 +70,20 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
+  # Attempt to fetch Quay SHA for the specified tag pattern
   echo "Attempting to fetch Quay SHA for tag: $name with pattern: $pattern"
+  quay_output=$(skopeo inspect docker://quay.io/modh/$name:$pattern 2>&1)
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to fetch Quay SHA for tag: $name with pattern: $pattern"
+    echo "skopeo output: $quay_output"
+    sha_mismatch_found=1
+    return
+  fi
 
-  # Loop through tags to find the correct one based on the pattern
-  local quay_hash=""
-  for tag in $tags; do
-    if [[ "$tag" == *"$pattern"* ]]; then
-      echo "Attempting to fetch Quay SHA for tag: $name with pattern: $pattern and tag: $tag"
-      quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$tag | jq -r '.Digest')
-      echo "Quay SHA for tag: $name with pattern: $pattern and tag: $tag is: $quay_hash"
-      if [ -n "$quay_hash" ]; then
-        break
-      fi
-    fi
-  done
-
-  # Check if Quay SHA was fetched
+  # Extract the SHA hash from the Quay output
+  quay_hash=$(echo "$quay_output" | jq -r '.Digest')
   if [ -z "$quay_hash" ]; then
-    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name with pattern: $pattern\e[0m"
+    echo "Error: Quay SHA could not be fetched for tag: $name with pattern: $pattern"
     sha_mismatch_found=1
     return
   fi
@@ -101,20 +97,16 @@ extract_names_with_att_extension() {
   fi
 }
 
-
 # Main logic for processing the file and SHAs
 main() {
   if [ -f "$full_path" ]; then
     echo "File found: $full_path"
-    local input
     input=$(<"$full_path")
 
     while IFS= read -r line; do
-      local name
-      local hash
       name=$(echo "$line" | cut -d'=' -f1)
       hash=$(echo "$line" | awk -F 'sha256:' '{print $2}')
-      extract_names_with_att_extension "$name" "$hash" "rhoai-2.11"
+      extract_names_with_att_extension "$name" "$hash"
     done <<< "$input"
   else
     echo "File not found: $full_path"
