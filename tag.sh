@@ -61,26 +61,36 @@ sha_mismatch_found=0
 
 # Function to check SHAs and print results
 extract_names_with_att_extension() {
-  local tag="$1"
+  local name="$1"
   local repo_hash="$2"
 
   if [ -z "$repo_hash" ]; then
-    echo "Error: The $tag image is referenced using floating tags. Exiting..."
+    echo "Error: The $name image is referenced using floating tags. Exiting..."
     exit 1
   fi
 
-  # Fetch the SHA from the tag
-  quay_hash=$(skopeo inspect docker://quay.io/modh/$tag | jq -r '.Digest')
+  # Fetch the tag from the JSON response using skopeo
+  json_response=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[] | select(. | endswith("rhoai-2.11"))')
+  
+  if [ -z "$json_response" ]; then
+    echo -e "\e[31mError: No matching tag found for $name in Quay repository\e[0m"
+    sha_mismatch_found=1
+    return
+  fi
+
+  local quay_hash
+  quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$json_response | jq -r '.Digest')
+
   if [ -z "$quay_hash" ]; then
-    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $tag\e[0m"
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name:$json_response\e[0m"
     sha_mismatch_found=1
     return
   fi
 
   if [ "$repo_hash" = "$quay_hash" ]; then
-    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $tag\e[0m"
+    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name:$json_response\e[0m"
   else
-    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $tag\e[0m"
+    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $name:$json_response\e[0m"
     sha_mismatch_found=1
   fi
 }
