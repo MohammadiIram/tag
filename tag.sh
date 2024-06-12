@@ -83,7 +83,9 @@ extract_names_with_att_extension() {
   for tag in $json_response; do
     if [[ "$tag" == *"rhoai-2.11"* ]]; then
       quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$tag | jq -r '.Digest')
-      break
+      if [ -n "$quay_hash" ]; then
+        break
+      fi
     fi
   done
 
