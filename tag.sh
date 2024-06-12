@@ -39,7 +39,7 @@ if [ $# -eq 1 ]; then
     branch_name="$1"
   fi
 else
-  branch_name=$(fetch_latest_branch "$repo_url")
+  branch_name=$(fetch_latest_branch("$repo_url"))
 fi
 
 echo "Attempting to clone the branch '$branch_name' from '$repo_url' into 'kserve' directory..."
@@ -69,8 +69,8 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
-  json_response=$(skopeo inspect docker://quay.io/modh/$tag | jq -r '.RepoTags | map(select(endswith(".att"))) | .[]')
-  quay_hash=$(echo "$json_response" | sed 's/^sha256-\(.*\)\.att$/\1/')
+  json_response=$(skopeo inspect --raw docker://quay.io/modh/$tag | jq -r '.manifests | map(select(.digest | endswith(".att"))) | .[].digest')
+  quay_hash=$(echo "$json_response" | sed 's/^sha256://')
 
   if [ "$repo_hash" = "$quay_hash" ]; then
     echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $tag\e[0m"
