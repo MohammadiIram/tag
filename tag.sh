@@ -70,15 +70,6 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
-  # Fetch the tags for the image using skopeo
-  local tags
-  tags=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[]')
-  
-  if [ -z "$tags" ]; then
-    echo -e "\e[31mError: No tags found for $name in Quay repository\e[0m"
-    sha_mismatch_found=1
-    return
-  fi
 
   # Loop through tags to find the correct one based on the pattern
   local quay_hash=""
