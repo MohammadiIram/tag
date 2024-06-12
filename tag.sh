@@ -69,15 +69,8 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
-  # Check if the tag exists
-  if ! skopeo inspect --raw docker://quay.io/modh/$tag &>/dev/null; then
-    echo "Error: Tag $tag does not exist in the repository."
-    exit 1
-  fi
-
   # Fetch the SHA from the tag
-  json_response=$(skopeo inspect --raw docker://quay.io/modh/$tag | jq -r '.manifests | map(select(.digest | endswith(".att"))) | .[].digest')
-  quay_hash=$(echo "$json_response" | sed 's/^sha256://')
+  quay_hash=$(skopeo inspect docker://quay.io/modh/$tag | jq -r '.Digest')
 
   if [ "$repo_hash" = "$quay_hash" ]; then
     echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $tag\e[0m"
