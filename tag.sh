@@ -70,27 +70,33 @@ extract_names_with_att_extension() {
   fi
 
   # Fetch the tag from the JSON response using skopeo
-  json_response=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[] | select(. | endswith("rhoai-2.11"))')
+  json_response=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[]')
   
   if [ -z "$json_response" ]; then
-    echo -e "\e[31mError: No matching tag found for $name in Quay repository\e[0m"
+    echo -e "\e[31mError: No tags found for $name in Quay repository\e[0m"
     sha_mismatch_found=1
     return
   fi
 
+  # Loop through tags to find the correct one (e.g., rhoai-2.11)
   local quay_hash
-  quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$json_response | jq -r '.Digest')
+  for tag in $json_response; do
+    if [[ "$tag" == *"rhoai-2.11"* ]]; then
+      quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$tag | jq -r '.Digest')
+      break
+    fi
+  done
 
   if [ -z "$quay_hash" ]; then
-    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name:$json_response\e[0m"
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name:$tag\e[0m"
     sha_mismatch_found=1
     return
   fi
 
   if [ "$repo_hash" = "$quay_hash" ]; then
-    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name:$json_response\e[0m"
+    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name:$tag\e[0m"
   else
-    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $name:$json_response\e[0m"
+    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $name:$tag\e[0m"
     sha_mismatch_found=1
   fi
 }
