@@ -18,6 +18,11 @@ if [[ -z "$repo_url" || -z "$file_path" ]]; then
   exit 1
 fi
 
+echo "Repository URL: $repo_url"
+echo "File Path: $file_path"
+
+fi
+
 # Function to fetch the latest branch with a specific pattern, or default to master if not found
 fetch_latest_branch() {
   local repo_url="$1"
