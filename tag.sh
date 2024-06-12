@@ -10,7 +10,7 @@ if [ ! -f "$config_file" ]; then
 fi
 
 # Read the repository URL and path from the file
-read -r repo_url file_path < "$config_file"
+read -r repo_url file_path < <(awk -F';' '{print $1, $2}' "$config_file")
 
 # Validate that both the URL and the path have been read
 if [[ -z "$repo_url" || -z "$file_path" ]]; then
@@ -70,29 +70,37 @@ extract_names_with_att_extension() {
     exit 1
   fi
 
-  # Fetch the SHA digest for the specific tag from Quay
-  local quay_tag
-  quay_tag=$(skopeo inspect docker://quay.io/modh/"$name" | jq -r ".RepoTags[] | select(contains(\"$pattern\"))")
+  # Fetch the tags for the image using skopeo
+  local tags
+  tags=$(skopeo inspect docker://quay.io/modh/$name | jq -r '.RepoTags[]')
   
-  if [ -z "$quay_tag" ]; then
-    echo -e "\e[31mError: No tag found for $name in Quay repository\e[0m"
+  if [ -z "$tags" ]; then
+    echo -e "\e[31mError: No tags found for $name in Quay repository\e[0m"
     sha_mismatch_found=1
     return
   fi
 
-  local quay_hash
-  quay_hash=$(skopeo inspect docker://quay.io/modh/"$name":"$quay_tag" | jq -r '.Digest')
+  # Loop through tags to find the correct one based on the pattern
+  local quay_hash=""
+  for tag in $tags; do
+    if [[ "$tag" == *"$pattern"* ]]; then
+      quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$tag | jq -r '.Digest')
+      if [ -n "$quay_hash" ]; then
+        break
+      fi
+    fi
+  done
 
   if [ -z "$quay_hash" ]; then
-    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $quay_tag\e[0m"
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name with pattern: $pattern\e[0m"
     sha_mismatch_found=1
     return
   fi
 
   if [ "$repo_hash" = "$quay_hash" ]; then
-    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $quay_tag\e[0m"
+    echo -e "\e[32mRepository SHA ($repo_hash) matches Quay SHA ($quay_hash) for tag: $name with pattern: $pattern\e[0m"
   else
-    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $quay_tag\e[0m"
+    echo -e "\e[31mRepository SHA ($repo_hash) does NOT match Quay SHA ($quay_hash) for tag: $name with pattern: $pattern\e[0m"
     sha_mismatch_found=1
   fi
 }
