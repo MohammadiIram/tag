@@ -2,7 +2,7 @@ name: tag
 
 on:
   schedule:
-    - cron: '30 4 * * *'  # Runs at 10 AM IST (4:30 AM UTC), defaults to the latest rhoai branch
+    - cron: '* * * * *'  # Runs at 10 AM IST (4:30 AM UTC), defaults to the latest rhoai branch
   workflow_dispatch:
     inputs:
       reference:
