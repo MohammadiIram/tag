@@ -30,7 +30,8 @@ extract_names_with_att_extension() {
 
   if [ -z "$repo_hash" ]; then
     echo "Error: The $name image is referenced using floating tags. Exiting..."
-    exit 1
+    sha_mismatch_found=1
+    return
   fi
 
   # Attempt to fetch Quay SHA for the given tag pattern
@@ -90,14 +91,6 @@ process_repo() {
   else
     echo "File not found: $full_path"
   fi
-
-  # Check if any SHA mismatches were found
-  if [ "$sha_mismatch_found" -ne 0 ]; then
-    echo "One or more SHA mismatches were found."
-    return 1
-  else
-    echo "All SHA hashes match."
-  fi
 }
 
 # Function to fetch and display Quay SHA for repositories without a file path
@@ -106,17 +99,21 @@ fetch_quay_sha() {
   local branch_name="$2"
   local tag_name=$(basename "$repo_url" .git)
 
-  echo "Fetching Quay SHA for tag: $tag_name"
+  echo "Fetching Quay SHA for tag: $tag_name with pattern: $branch_name"
   local quay_sha
   quay_sha=$(skopeo inspect docker://quay.io/modh/$tag_name:$branch_name | jq -r '.Digest' | cut -d':' -f2)
   if [ -n "$quay_sha" ]; then
-    echo -e "\e[32mSuccessfully fetched Quay SHA ($quay_sha) for tag: $tag_name\e[0m"
+    echo -e "\e[32mSuccessfully fetched Quay SHA ($quay_sha) for tag: $tag_name with pattern: $branch_name\e[0m"
   else
-    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $tag_name\e[0m"
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $tag_name with pattern: $branch_name\e[0m"
+    sha_mismatch_found=1
     return 1
   fi
   return 0
 }
+
+# Initialize a variable to keep track of SHA mismatches
+sha_mismatch_found=0
 
 # Read the repository URLs and paths from the file
 while IFS=';' read -r repo_url file_path; do
