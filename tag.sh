@@ -104,7 +104,7 @@ process_repo() {
 fetch_quay_sha() {
   local repo_url="$1"
   local branch_name="$2"
-  local tag_name=$(basename "$repo_url")
+  local tag_name=$(basename "$repo_url" .git)
 
   echo "Fetching Quay SHA for tag: $tag_name"
   local quay_sha
