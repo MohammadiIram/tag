@@ -9,15 +9,15 @@ if [ ! -f "$config_file" ]; then
   exit 1
 fi
 
-# Function to fetch the latest branch with a specific pattern, or default to master if not found
+# Function to fetch the latest branch with a specific pattern.
 fetch_latest_branch() {
   local repo_url="$1"
   local pattern="${2:-rhoai}"
   local branch
   branch=$(git ls-remote --heads "$repo_url" | grep "$pattern" | awk -F'/' '{print $NF}' | sort -V | tail -1)
   if [ -z "$branch" ]; then
-    echo "No branch matching the pattern '$pattern' found. Defaulting to 'master'."
-    branch="master"
+    echo "No branch matching the pattern '$pattern' found."
+    exit 1
   fi
   echo "$branch"
 }
