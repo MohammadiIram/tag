@@ -99,6 +99,19 @@ process_repo() {
     echo "All SHA hashes match."
   fi
 
+  # Fetch Quay SHAs for the must-gather repository
+  echo "Fetching Quay SHAs for repository: https://github.com/red-hat-data-services/must-gather.git"
+  must_gather_tag="must-gather"
+  echo "Attempting to fetch Quay SHA for tag: $must_gather_tag"
+  local quay_sha
+  quay_sha=$(skopeo inspect docker://quay.io/modh/$must_gather_tag:$branch_name | jq -r '.Digest' | cut -d':' -f2)
+  if [ -n "$quay_sha" ]; then
+    echo -e "\e[32mSuccessfully fetched Quay SHA ($quay_sha) for tag: $must_gather_tag\e[0m"
+  else
+    echo -e "\e[31mError: Quay SHA could not be fetched for tag: $must_gather_tag\e[0m"
+    return 1
+  fi
+
   return 0
 }
 
@@ -121,19 +134,16 @@ while IFS=';' read -r repo_url file_path; do
 
   # Process each repository
   if [ "$file_path" = "none" ]; then
-    echo "Fetching Quay SHAs for repository: $repo_url"
-    must_gather_tags=("must-gather" "kube-must-gather")
-    for tag in "${must_gather_tags[@]}"; do
-      echo "Attempting to fetch Quay SHA for tag: $tag"
-      local quay_sha
-      quay_sha=$(skopeo inspect docker://quay.io/modh/$tag:$branch_name | jq -r '.Digest' | cut -d':' -f2)
-      if [ -n "$quay_sha" ]; then
-        echo -e "\e[32mSuccessfully fetched Quay SHA ($quay_sha) for tag: $tag\e[0m"
-      else
-        echo -e "\e[31mError: Quay SHA could not be fetched for tag: $tag\e[0m"
-      fi
-    done
+    echo "Skipping repository without a file path: $repo_url"
   else
     process_repo "$repo_url" "$file_path" "$branch_name"
   fi
 done < "$config_file"
+
+# Check if the script should exit with an error
+if [ "$sha_mismatch_found" -ne 0 ]; then
+  echo "One or more SHA mismatches or fetching errors were found."
+  exit 1
+else
+  echo "All SHA hashes match and were successfully fetched."
+fi
