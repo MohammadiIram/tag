@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Debug output to check received branch name
+echo "Received branch name: $1"
+
 # File containing the repository URLs and paths
 config_file="./repo_url.txt"
 
