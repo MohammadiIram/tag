@@ -41,6 +41,7 @@ extract_names_with_att_extension() {
   echo "Attempting to fetch Quay SHA for tag: $name with pattern: $pattern"
   local quay_hash
   quay_hash=$(skopeo inspect docker://quay.io/modh/$name:$pattern | jq -r '.Digest' | cut -d':' -f2)
+  echo "Quay SHA fetched: $quay_hash"  # Debug statement to check the fetched Quay SHA
 
   if [ -z "$quay_hash" ]; then
     echo -e "\e[31mError: Quay SHA could not be fetched for tag: $name with pattern: $pattern\e[0m"
@@ -89,6 +90,7 @@ process_repo() {
       local hash
       name=$(echo "$line" | cut -d'=' -f1)
       hash=$(echo "$line" | awk -F 'sha256:' '{print $2}')
+      echo "Processing image: $name with hash: $hash"  # Debug statement to show current image processing
       extract_names_with_att_extension "$name" "$hash" "$branch_name"
     done <<< "$input"
   else
@@ -105,6 +107,8 @@ fetch_quay_sha() {
   echo "Fetching Quay SHA for tag: $tag_name with pattern: $branch_name"
   local quay_sha
   quay_sha=$(skopeo inspect docker://quay.io/modh/$tag_name:$branch_name | jq -r '.Digest' | cut -d':' -f2)
+  echo "Quay SHA fetched: $quay_sha"  # Debug statement to check the fetched Quay SHA
+
   if [ -n "$quay_sha" ]; then
     echo -e "\e[32mSuccessfully fetched Quay SHA ($quay_sha) for tag: $tag_name with pattern: $branch_name\e[0m"
   else
