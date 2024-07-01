@@ -2,7 +2,7 @@ name: tag
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Runs at 10 AM IST (4:30 AM UTC), defaults to the latest rhoai branch
+    - cron: '*/1 * * * *'  # Runs every minute for testing
   workflow_dispatch:
     inputs:
       reference:
@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up skopeo
+    - name: Set up skopeo and jq
       run: |
         sudo apt-get update
         sudo apt-get install -y skopeo jq
@@ -25,5 +25,6 @@ jobs:
       env:
         BRANCH_NAME: ${{ github.event.inputs.reference || 'latest' }}
       run: |
+        echo "Executing script with branch name: $BRANCH_NAME"
         chmod +x ./tag.sh
-        ./tag.sh $BRANCH_NAME
+        ./tag.sh "$BRANCH_NAME"
